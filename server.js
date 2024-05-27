@@ -4,13 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(bodyParser.json());
 
 const leaderboardFile = path.join(__dirname, 'leaderboard.json');
 
-app.get('/leaderboard', (req, res) => {
+app.get('/api/leaderboard', (req, res) => {
   fs.readFile(leaderboardFile, (err, data) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to read leaderboard file' });
@@ -19,7 +17,7 @@ app.get('/leaderboard', (req, res) => {
   });
 });
 
-app.post('/leaderboard', (req, res) => {
+app.post('/api/leaderboard', (req, res) => {
   const newEntry = req.body;
   fs.readFile(leaderboardFile, (err, data) => {
     if (err) {
@@ -46,6 +44,4 @@ app.post('/leaderboard', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = app;
