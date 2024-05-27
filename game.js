@@ -30,11 +30,11 @@ var Snake = (function () {
   var timeLeft = 120; // 2 minutes in seconds
 
   function setup() {
-    canv = document.getElementById('gc');
-    ctx = canv.getContext('2d');
-    game.reset();
-    startTimer();
-  }
+  canv = document.getElementById('gc');
+  ctx = canv.getContext('2d');
+  game.reset();
+}
+
 
   function startTimer() {
     var timerElement = document.getElementById('timer');
@@ -52,10 +52,11 @@ var Snake = (function () {
   }
 
   function gameOver() {
-    Snake.stop();
-    alert('Game Over! Time is up.');
-    saveScore(pointsMax);
-  }
+  Snake.stop();
+  alert('Game Over! Time is up.');
+  saveScore(pointsMax, pointsMax); // Passing pointsMax as both score and pointsMax
+}
+
 
   var game = {
     reset: function () {
@@ -307,14 +308,14 @@ Snake.start(8);
 Snake.setup.keyboard(true);
 Snake.setup.fixedTail(false);
 
-async function saveScore(score) {
+async function saveScore(score, pointsMax) {
   if (!metamaskConnected) return;
 
   try {
     const response = await fetch('https://zksync-snake.vercel.app/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: currentUserAddress, score }),
+      body: JSON.stringify({ address: currentUserAddress, score, pointsMax }),
     });
     const data = await response.json();
     console.log('Leaderboard updated:', data);
@@ -322,6 +323,34 @@ async function saveScore(score) {
     console.error('Error saving score:', error);
   }
 }
+
+app.post('/api/leaderboard', (req, res) => {
+  const { address, score, pointsMax } = req.body; // Extract pointsMax from the request body
+  fs.readFile(leaderboardFile, (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to read leaderboard file' });
+    }
+    let leaderboard = JSON.parse(data);
+    const existingEntry = leaderboard.find(entry => entry.address === address);
+
+    if (existingEntry) {
+      existingEntry.score = Math.max(existingEntry.score, score);
+      existingEntry.pointsMax = Math.max(existingEntry.pointsMax, pointsMax); // Update pointsMax
+    } else {
+      leaderboard.push({ address, score, pointsMax }); // Add pointsMax to the new entry
+    }
+
+    leaderboard.sort((a, b) => b.score - a.score);
+    leaderboard = leaderboard.slice(0, 10);
+
+    fs.writeFile(leaderboardFile, JSON.stringify(leaderboard, null, 2), (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to write leaderboard file' });
+      }
+      res.json(leaderboard);
+    });
+  });
+});
 
 document.getElementById('leaderboardButton').onclick = async function () {
   const modal = document.getElementById('leaderboardModal');
